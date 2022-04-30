@@ -17,7 +17,7 @@ public extension MatchSpeed {
         case .fast:
             return 0.5
         case .ultraFast:
-            return 0.1
+            return 0.01
         }
     }
 }

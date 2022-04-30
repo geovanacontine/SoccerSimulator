@@ -1,6 +1,6 @@
 import Foundation
 
-public struct LoseBallPossessionAction: MatchActionProtocol {
+public struct ShotOnTargetAction: MatchActionProtocol {
     public let isFinalAction = true
     public let willAdvanceFieldSection = false
     public let willChangeBallPossession = true

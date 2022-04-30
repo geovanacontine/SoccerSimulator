@@ -5,6 +5,5 @@ public struct GoalAction: MatchActionProtocol {
     public let willAdvanceFieldSection = false
     public let willChangeBallPossession = true
     public let willResetFieldSection = true
-    public let isMatchEvent = true
-    public let displayMessage: String? = "GOOOOOOOOOOOL!"
+    public let displayMessage: String? = "⚽️"
 }
