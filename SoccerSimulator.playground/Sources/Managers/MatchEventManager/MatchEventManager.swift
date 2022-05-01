@@ -8,50 +8,31 @@ public class MatchEventManager {
         events = []
     }
     
-    public func addEvent(_ event: Event) {
-        events.append(event)
-    }
-    
-    private func eventCount<T: MatchActionProtocol>(team: Team, action: T.Type) -> Int {
-        events
-            .filter({ $0.team == team })
-            .compactMap({ $0.action as? T })
-            .count
+    public func addEvents(_ newEvents: [Event]) {
+        events += newEvents
     }
 }
 
 // MARK: - Match facts
 
 public extension MatchEventManager {
-    func goals(_ team: Team) -> Int {
-        eventCount(team: team, action: GoalAction.self)
+    func matchFacts(team: Team) -> MatchFacts {
+        .init(goals: count(type: .goal, team: team),
+              attempts: count(type: .shotAttempt, team: team),
+              onTarget: count(type: .shotOnTarget, team: team),
+              fouls: count(type: .foul, team: team),
+              yellowCards: count(type: .yellowCard, team: team),
+              redCards: count(type: .redCard, team: team),
+              possession: ballPossession(team))
     }
     
-    func shotsOnTarget(_ team: Team) -> Int {
-        eventCount(team: team, action: ShotOnTargetAction.self) +
-        goals(team)
+    private func count(type: EventType, team: Team) -> Int {
+        events
+            .filter({ $0.team == team && $0.type == type })
+            .count
     }
     
-    func attempts(_ team: Team) -> Int{
-        eventCount(team: team, action: MissedShotAction.self) +
-        shotsOnTarget(team)
-    }
-    
-    func fouls(_ team: Team) -> Int{
-        eventCount(team: team.reversed, action: FouledAction.self) +
-        yellowCards(team) +
-        redCards(team)
-    }
-    
-    func yellowCards(_ team: Team) -> Int{
-        eventCount(team: team.reversed, action: FouledAndYellowCardAction.self)
-    }
-    
-    func redCards(_ team: Team) -> Int{
-        eventCount(team: team.reversed, action: FouledAndRedCardAction.self)
-    }
-    
-    func ballPossession(_ team: Team) -> Int {
+    private func ballPossession(_ team: Team) -> Int {
         let totalEvents = events.count
         let teamEvents = events.filter({ $0.team == team }).count
         let rate = Double(teamEvents) / Double(totalEvents)

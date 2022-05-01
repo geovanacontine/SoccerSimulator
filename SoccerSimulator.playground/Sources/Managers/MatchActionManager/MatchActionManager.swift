@@ -1,62 +1,25 @@
 import Foundation
 
-public struct PlayInput {
-    let fieldSection: FieldSection
-    let attackingTeam: Team
-}
-
-public struct PlayOutput {
-    var fieldSection: FieldSection
-    var attackingTeam: Team
-    let action: MatchActionProtocol
-    
-    public init(fieldSection: FieldSection, attackingTeam: Team, action: MatchActionProtocol) {
-        self.fieldSection = fieldSection
-        self.attackingTeam = attackingTeam
-        self.action = action
-        
-        updatedFieldSection()
-        updateAttackingTeam()
-    }
-    
-    private mutating func updateAttackingTeam() {
-        if action.willChangeBallPossession {
-            attackingTeam = attackingTeam.reversed
-            fieldSection = fieldSection.reversed
-        }
-    }
-    
-    private mutating func updatedFieldSection() {
-        if action.willAdvanceFieldSection {
-            fieldSection = fieldSection.next ?? .midfield
-        } else if action.willResetFieldSection {
-            fieldSection = .midfield
-        }
-    }
-}
-
 public class MatchActionManager {
     
-    public func simulatePlay(_ input: PlayInput) -> PlayOutput {
-        var section = input.fieldSection
-        var partialActionResult = simulatePartialPlay(section)
-        
-        let action = String(describing: type(of: partialActionResult))
-//        print("")
-//        print("\(input.attackingTeam) - \(section) - \(action)")
-        
-        while !partialActionResult.isFinalAction {
-            section = section.next ?? .midfield
-            partialActionResult = simulatePartialPlay(section)
-            
-            let action = String(describing: type(of: partialActionResult))
-//            print("\(input.attackingTeam) - \(section) - \(action)")
+    public func simulatePlay(_ input: ActionInput) -> ActionOutput {
+        var section = input.section
+        var action = randomAction(section)
+        var pastEvents: [Event] = []
+
+        while !action.isFinalAction {
+            let output = action.simulate(.init(section: section, team: input.team))
+            pastEvents += output.events
+            section = output.section
+            action = randomAction(section)
         }
         
-        return .init(fieldSection: section, attackingTeam: input.attackingTeam, action: partialActionResult)
+        let output = action.simulate(.init(section: section, team: input.team))
+        let totalEvents = pastEvents + output.events
+        return .init(section: output.section, team: output.team, events: totalEvents)
     }
     
-    private func simulatePartialPlay(_ section: FieldSection) -> MatchActionProtocol {
+    private func randomAction(_ section: FieldSection) -> MatchActionProtocol {
         let possibilities = getPossibilitiesArray(fieldSection: section)
         let randomNumber = Int.random(in: 0...99)
         return possibilities[randomNumber]
@@ -76,35 +39,30 @@ public class MatchActionManager {
     }
     
     private func defensePossibilitiesArray() -> [MatchActionProtocol] {
-        baseArray(advance: 85, keep: 5, lose: 5) +
-        .init(repeating: FouledAction(), count: 4) +
-        .init(repeating: FouledAndYellowCardAction(), count: 1)
+        .init(repeating: AdvanceFieldSectionAction(), count: 85) +
+        .init(repeating: KeepBallPossessionAction(), count: 5) +
+        .init(repeating: LoseBallPossessionAction(), count: 5) +
+        .init(repeating: FoulAction(), count: 5)
     }
     
     private func midfieldPossibilitiesArray() -> [MatchActionProtocol] {
-        baseArray(advance: 45, keep: 10, lose: 35) +
-        .init(repeating: FouledAction(), count: 8) +
-        .init(repeating: FouledAndYellowCardAction(), count: 2)
+        .init(repeating: AdvanceFieldSectionAction(), count: 40) +
+        .init(repeating: KeepBallPossessionAction(), count: 10) +
+        .init(repeating: LoseBallPossessionAction(), count: 39) +
+        .init(repeating: FinishAction(), count: 1) +
+        .init(repeating: FoulAction(), count: 10)
     }
     
     private func attackPossibilitiesArray() -> [MatchActionProtocol] {
-        baseArray(advance: 25, keep: 10, lose: 55) +
-        .init(repeating: FouledAction(), count: 6) +
-        .init(repeating: FouledAndYellowCardAction(), count: 3) +
-        .init(repeating: FouledAndRedCardAction(), count: 1)
+        .init(repeating: AdvanceFieldSectionAction(), count: 25) +
+        .init(repeating: KeepBallPossessionAction(), count: 10) +
+        .init(repeating: LoseBallPossessionAction(), count: 50) +
+        .init(repeating: FinishAction(), count: 5) +
+        .init(repeating: FoulAction(), count: 10)
     }
     
     private func goalkeeperPossibilitiesArray() -> [MatchActionProtocol] {
-        .init(repeating: GoalAction(), count: 20) +
-        .init(repeating: ShotOnTargetAction(), count: 30) +
-        .init(repeating: MissedShotAction(), count: 48) +
-        .init(repeating: FouledAndYellowCardAction(), count: 1) +
-        .init(repeating: FouledAndRedCardAction(), count: 1)
-    }
-    
-    private func baseArray(advance: Int, keep: Int, lose: Int) -> [MatchActionProtocol] {
-        .init(repeating: AdvanceFieldSectionAction(), count: advance) +
-        .init(repeating: KeepBallPossessionAction(), count: keep) +
-        .init(repeating: LoseBallPossessionAction(), count: lose)
+        .init(repeating: FinishAction(), count: 95) +
+        .init(repeating: FoulAction(), count: 5)
     }
 }

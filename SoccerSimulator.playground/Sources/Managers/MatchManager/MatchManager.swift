@@ -50,14 +50,19 @@ extension MatchManager {
 
 extension MatchManager {
     private func executePlay() {
-        let input = PlayInput(fieldSection: activeSection, attackingTeam: activeTeam)
+        let input = ActionInput(section: activeSection, team: activeTeam)
         let output = actionManager.simulatePlay(input)
         
-        eventManager.addEvent(.init(time: time, action: output.action, team: activeTeam))
-        updateDisplay(output.action)
+        eventManager.addEvents(
+            output.events.map { event in
+                .init(time: time, type: event.type, team: event.team)
+            }
+        )
         
-        activeSection = output.fieldSection
-        activeTeam = output.attackingTeam
+        updateDisplay(output.events.last)
+        
+        activeSection = output.section
+        activeTeam = output.team
     }
 }
 
@@ -93,26 +98,29 @@ extension MatchManager {
 // MARK: - Display
 
 extension MatchManager {
-    private func updateDisplay(_ action: MatchActionProtocol) {
-        let homeGoals = eventManager.goals(.home)
-        let awayGoals = eventManager.goals(.away)
+    private func updateDisplay(_ event: Event?) {
+        let homeGoals = eventManager.matchFacts(team: .home).goals
+        let awayGoals = eventManager.matchFacts(team: .away).goals
         let formattedTime = String(format: "%02d", time)
-        let customMessage = action.displayMessage ?? ""
+        let customMessage = event?.type.displayText ?? ""
         
         print("\(homeGoals) x \(awayGoals) | \(formattedTime)' - \(gameHalf)° | \(customMessage)")
     }
     
     private func showStatistics() {
+        let homeFacts = eventManager.matchFacts(team: .home)
+        let awayFacts = eventManager.matchFacts(team: .away)
+        
         print("")
         print("------- Match facts -------")
         print("")
-        print("\(eventManager.goals(.home).formatted())      Goals      \(eventManager.goals(.away).formatted())")
-        print("\(eventManager.attempts(.home).formatted())     Attempts    \(eventManager.attempts(.away).formatted())")
-        print("\(eventManager.shotsOnTarget(.home).formatted())     On target   \(eventManager.shotsOnTarget(.away).formatted())")
-        print("\(eventManager.fouls(.home).formatted())      Fouls      \(eventManager.fouls(.away).formatted())")
-        print("\(eventManager.yellowCards(.home).formatted())   Yellow cards  \(eventManager.yellowCards(.away).formatted())")
-        print("\(eventManager.redCards(.home).formatted())    Red cards    \(eventManager.redCards(.away).formatted())")
-        print("\(eventManager.ballPossession(.home).formatted())%   Possession   \(eventManager.ballPossession(.away).formatted())%")
+        print("\(homeFacts.goals.formatted())      Goals      \(awayFacts.goals.formatted())")
+        print("\(homeFacts.attempts.formatted())     Attempts    \(awayFacts.attempts.formatted())")
+        print("\(homeFacts.onTarget.formatted())     On target   \(awayFacts.onTarget.formatted())")
+        print("\(homeFacts.fouls.formatted())      Fouls      \(awayFacts.fouls.formatted())")
+        print("\(homeFacts.yellowCards.formatted())   Yellow cards  \(awayFacts.yellowCards.formatted())")
+        print("\(homeFacts.redCards.formatted())    Red cards    \(awayFacts.redCards.formatted())")
+        print("\(homeFacts.possession.formatted())%   Possession   \(awayFacts.possession.formatted())%")
         print("")
         print("---------------------------")
     }
